@@ -118,7 +118,10 @@ def train(arg):
     global args, symbols, best_weights, SEED, X_bank
     args = arg
 
-    filenames = [ (args["dir"] + os.path.sep + x) for x in args["X_train"].flatten().tolist() ]
+    print args["X_train"]
+
+    filenames = [ (args["dir"] + os.path.sep + args["attr_values"]["filename"][int(x)]) \
+        for x in args["X_train"].flatten().tolist() ]
 
     if "cache" in args:
         print "Loading all images into memory"
