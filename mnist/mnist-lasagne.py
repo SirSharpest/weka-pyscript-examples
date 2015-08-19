@@ -118,8 +118,6 @@ def train(arg):
     global args, symbols, best_weights, SEED, X_bank
     args = arg
 
-    print args["X_train"]
-
     filenames = [ (args["dir"] + os.path.sep + args["attr_values"]["filename"][int(x)]) \
         for x in args["X_train"].flatten().tolist() ]
 
@@ -202,7 +200,9 @@ def test(arg, model):
         symbols.label_vector
     )
 
-    filenames = [ (args["dir"] + os.path.sep + x) for x in args["X_test"].flatten().tolist() ]
+    filenames = [ (args["dir"] + os.path.sep + args["filename"][int(x)]) \
+        for x in args["X_test"].flatten().tolist() ]
+
     X_test = np.asarray( [load_image(x) for x in filenames], dtype="float32" )
 
     if "batch_size" in args:
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     args = pickle.load(f)
     args["lambda"] = 0
     args["alpha"] = 0.01
-    args["epochs"] = 10
+    args["epochs"] = 1
     #args["cache"] = True
     args["dir"] = "data"
     f.close()
