@@ -1,3 +1,4 @@
+import lasagne
 from lasagne import layers
 from lasagne.updates import nesterov_momentum
 from lasagne.nonlinearities import softmax
@@ -85,12 +86,45 @@ def get_net(filenames):
         batch_iterator_test = FilenameToImageBatchIterator(filenames, batch_size=128),
         verbose=1,
         max_epochs=1
-    )  
+    )
+
+def get_conv_net(filenames):
+    """
+    A "skinny" version of the network architecture here:
+    https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet.prototxt
+    """
+    return NeuralNet(
+        layers = [
+            ('l_in', layers.InputLayer),
+            ('l_conv1', layers.Conv2DLayer),
+            ('l_pool1', layers.MaxPool2DLayer),
+            ('l_conv2', layers.Conv2DLayer),
+            ('l_pool2', layers.MaxPool2DLayer),
+            ('l_hidden', layers.DenseLayer),
+            ('l_out', layers.DenseLayer)
+        ],
+
+        l_in_shape = (None, 1, 28, 28),
+        l_conv1_filter_size=(5,5), l_conv1_num_filters=20/2,
+        l_pool1_pool_size=(2,2),
+        l_conv2_filter_size=(5,5), l_conv2_num_filters=50/2,
+        l_pool2_pool_size=(2,2),
+        l_hidden_num_units=500/2, l_hidden_nonlinearity=lasagne.nonlinearities.rectify, l_hidden_W=lasagne.init.GlorotUniform(),
+        l_out_num_units=10, l_out_nonlinearity=lasagne.nonlinearities.softmax, l_out_W=lasagne.init.GlorotUniform(),
+
+        update=nesterov_momentum,
+        update_learning_rate=0.01,
+        update_momentum=0.9,
+        batch_iterator_train = FilenameToImageBatchIterator(filenames, batch_size=128),
+        batch_iterator_test = FilenameToImageBatchIterator(filenames, batch_size=128),
+        verbose=1,
+        max_epochs=1
+    )
 
 def train(args):
     filenames = [ (args["dir"] + os.path.sep + elem) for elem in args["attr_values"]["filename"] ] 
     y_train = np.asarray(args["y_train"].flatten(), dtype="int32")
-    net1 = get_net(filenames)
+    net1 = get_conv_net(filenames)
     X_train = args["X_train"]
     with Capturing() as output:
         model = net1.fit(X_train, y_train)
@@ -102,7 +136,7 @@ def describe(args, model):
 
 def test(args, model):
     filenames = [ (args["dir"] + os.path.sep + elem) for elem in args["attr_values"]["filename"] ]
-    net1 = get_net(filenames)
+    net1 = get_conv_net(filenames)
     net1.initialize()
     net1.load_params_from(model["params"])
     X_test = args["X_test"]
@@ -115,5 +149,8 @@ if __name__ == "__main__":
     args["dir"] = "data"
     f.close()
     dd =  train(args)
-    args["X_test"] = args["X_train"]
-    test(args, dd)
+
+    print dd["results"]
+
+    #args["X_test"] = args["X_train"]
+    #test(args, dd)
