@@ -6,7 +6,7 @@ This repository is an example of how the MNIST dataset can be efficiently traine
 Requirements
 ---
 
-This example requires [Theano](https://github.com/Theano/Theano), [Lasagne](https://github.com/Lasagne/Lasagne), and [nolearn](https://github.com/dnouri/nolearn). These should be installed as per their respective README files, and not using `pip` (which may install outdated versions).
+This example requires [Theano](https://github.com/Theano/Theano), [Lasagne](https://github.com/Lasagne/Lasagne), and [nolearn](https://github.com/dnouri/nolearn). These should be installed from source (see README in root directory).
 
 Training
 ---
@@ -20,11 +20,9 @@ unzip data.zip
 Then, simply run:
 
 ```
-java weka.Run weka.classifiers.pyscript.PyScriptClassifier \
-    -pc python \
-    -fn mnist-lasagne.py \
-    -xp "'lambda'=0,'alpha'=0.01,'epochs'=10,'dir'='data'" \
-    -yp "'lambda'=0,'alpha'=0.01,'epochs'=10,'dir'='data'" \
+java weka.Run .PyScriptClassifier \
+    -script mnist-nolearn.py \
+    -args "'dir'='data'" \
     -t mnist.meta.arff -no-cv
 ```
 
