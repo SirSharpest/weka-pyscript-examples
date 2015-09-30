@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import lasagne
 from lasagne import layers
 from lasagne.updates import nesterov_momentum
@@ -8,25 +10,20 @@ from nolearn.lasagne import BatchIterator
 from nolearn.lasagne import PrintLayerInfo
 from nolearn.lasagne import PrintLog
 
-import gzip
-import cPickle as pickle
-import os
+from pyscript.pyscript import ArffToArgs, uses
 
+import gzip
+import os
 from skimage import io
 from skimage import img_as_float
-
 import numpy as np
-
 import sys
-
 import re
 
-from cStringIO import StringIO
-
-"""
-Interesting tutorial:
-http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial/
-"""
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 def remove_colour(st):
     """
@@ -38,11 +35,7 @@ def remove_colour(st):
 def load_image(filename):
     img = io.imread(filename)
     img = img_as_float(img) # don't need to do float32 conversion
-    # if it's an rgb image
-    if len(img.shape) == 3 and img.shape[2] == 3:
-        img = np.asarray( [ img[..., 0], img[..., 1], img[..., 2] ] )
-    else: # if it's a bw image
-        img = np.asarray( [ img ] )
+    img = np.asarray( [ img ] )
     return img
 
 class Capturing(list):
@@ -121,6 +114,7 @@ def get_conv_net(filenames):
         max_epochs=1
     )
 
+@uses(["dir"])
 def train(args):
     filenames = [ (args["dir"] + os.path.sep + elem) for elem in args["attr_values"]["filename"] ] 
     y_train = np.asarray(args["y_train"].flatten(), dtype="int32")
@@ -143,14 +137,10 @@ def test(args, model):
     return net1.predict_proba(X_test).tolist()
 
 if __name__ == "__main__":
-
-    f = gzip.open("other/mnist.meta.pkl.gz")
-    args = pickle.load(f)
-    args["dir"] = "data"
+    f = ArffToArgs()
+    f.set_input("mnist.meta.arff")
+    args = f.get_args()
     f.close()
-    dd =  train(args)
-
-    print dd["results"]
-
-    #args["X_test"] = args["X_train"]
-    #test(args, dd)
+    args["dir"] = "data"
+    dd = train(args)
+    print(dd["results"])

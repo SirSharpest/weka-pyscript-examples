@@ -1,5 +1,4 @@
-import gzip
-import cPickle as pickle
+from __future__ import print_function
 
 import lasagne
 import theano
@@ -12,11 +11,10 @@ import imp
 import time
 import os
 
-import gzip
-import cPickle as pickle
-
 from skimage import io
 from skimage import img_as_float
+
+from pyscript.pyscript import ArffToArgs
 
 class Container(object):
     def __init__(self, adict):
@@ -122,7 +120,7 @@ def train(arg):
         for x in args["X_train"].flatten().tolist() ]
 
     if "cache" in args:
-        print "Loading all images into memory"
+        print("Loading all images into memory")
         #X_bank = np.asarray( [load_image(x) for x in filenames], dtype="float32" )
         raise NotImplementedError()
 
@@ -216,14 +214,14 @@ def test(arg, model):
 
 if __name__ == '__main__':
 
-    f = gzip.open("other/mnist.meta.pkl.gz")
-    args = pickle.load(f)
+    f = ArffToArgs()
+    f.set_input("mnist.meta.arff")
+    args = f.get_args()
+    f.close()
     args["lambda"] = 0
     args["alpha"] = 0.01
     args["epochs"] = 1
-    #args["cache"] = True
     args["dir"] = "data"
-    f.close()
 
     weights = train(args)
 
@@ -232,6 +230,6 @@ if __name__ == '__main__':
     preds = test(args, weights)
 
     for pred in preds:
-        print pred
+        print(pred)
 
 
