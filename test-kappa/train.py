@@ -169,6 +169,15 @@ def train(arg):
     alpha = theano.shared( args["alpha"] )
     momentum = 0.9
 
+    # decay/schedules are optional and mutually exclusive
+    assert not ("decay" in args and "schedule" in args)
+    decay = -1
+    schedule = -1
+    if "decay" in args:
+        decay = args["decay"]
+    if "schedule" in args:
+        schedule = args["schedule"]
+
     if alpha != -1:
         if "rmsprop" in args:
             updates = lasagne.updates.rmsprop(symbols.loss, symbols.all_params, alpha)
@@ -190,54 +199,44 @@ def train(arg):
     args["X_train"] = np.asarray(args["X_train"], dtype="float32")
     args["y_train"] = np.asarray(args["y_train"].flatten(), dtype="int32")
 
-    if "batch_size" in args:
-        bs = args["batch_size"]
-    else:
-        bs = 128
+    X_train = args["X_train"]
+    y_train = args["y_train"]
 
     best_valid_accuracy = -1
     last_loss = -100000
-    eps = 1e-6
+    #eps = 1e-6
+    eps = 0.01
     tol_counter = 0
-    tolerance = 5
+    tolerance = 100
     np.random.seed(SEED)
     for e in range(0, args["epochs"]):
 
-        # if we're doing sgd/msgd
-        if bs < X_train.shape[0]:
-            np.random.seed(SEED)
-            np.random.shuffle(X_train)
-            np.random.seed(SEED)
-            np.random.shuffle(y_train)
-
-            SEED += 1
-            np.random.seed(SEED)
-
         sys.stderr.write("Epoch #%i:\n" % e)
-        batch_train_losses = []
-        batch_train_accuracies = []
-        for b in range(0, X_train.shape[0]):
-            if b*bs >= X_train.shape[0]:
-                break
-            #sys.stderr.write("  Batch #%i (%i-%i)\n" % ((b+1), (b*bs), ((b+1)*bs) ))
-            vectors, pds, loss, acc = iter_train( X_train[b*bs : (b+1)*bs], y_train[b*bs : (b+1)*bs] )
-            if debug:
-                print vectors[0:10], pds[0:10]
-            if "expectation" in args:
-                acc = sum( np.equal(expectations_rounded(vectors), y_train[b*bs : (b+1)*bs]) )
-            batch_train_losses.append(loss)
-            batch_train_accuracies.append(acc)
+        vectors, pds, loss, acc = iter_train( X_train, y_train )
+        if debug:
+            print vectors[0:10], pds[0:10]
 
-        print( "  train_loss, train_accuracy, = %f, %f\n" % \
-            (np.mean(batch_train_losses), np.mean(batch_train_accuracies)) )
+        print( "  train_loss, train_accuracy, = %f, %f\n" % (loss, acc) )
 
-        if abs(np.mean(batch_train_losses) - last_loss) < eps:
+        """
+        if "decay" in args:
+            # decay formula: alpha_new = alpha / (1 + epoch*decay_rate)
+            alpha.set_value( args["alpha"] / (1 + ((e+1)*decay)) )
+            print "new alpha: %f" % alpha.get_value()
+        """
+        if "schedule" in args:
+            if (e+1) % schedule == 0:
+                alpha.set_value( alpha.get_value() / 2 )
+                print "new alpha: %f" % alpha.get_value()
+        if abs(loss - last_loss) < eps: # if they're similar
             tol_counter += 1
+            # if the loss has been the "same" for the past `tolerence` iterations
+            # then stop
             if tol_counter == tolerance:
                 break
         else:
-            last_loss = np.mean(batch_train_losses)
             tol_counter = 0
+            last_loss = loss
 
     best_weights = lasagne.layers.get_all_param_values(symbols.output_layer)
 
@@ -253,41 +252,58 @@ def test(arg, weights):
 
     symbols = prepare()
     lasagne.layers.set_all_param_values(symbols.output_layer, weights)
-    iter_test = theano.function(
-        [symbols.X],
-        symbols.prob_vector
-    )
+
+    if "regression" in args:
+        iter_test = theano.function(
+            [symbols.X],
+            symbols.pred
+        )
+    else:
+        iter_test = theano.function(
+            [symbols.X],
+            symbols.prob_vector
+        )
 
     args["X_test"] = np.asarray(args["X_test"], dtype="float32")
-
-    if "batch_size" in args:
-        bs = args["batch_size"]
-    else:
-        bs = 128
-
     X_test = args["X_test"]
 
     preds = iter_test(X_test).tolist()
-    if "expectation" in args:
+
+    if "regression" in args:
         new = []
         for pred in preds:
-            label = int( round(expectation(pred)) )
-            new.append( np.eye(args["num_classes"])[label].tolist() )
+            new.append( np.eye(args["num_classes"])[pred].tolist() )
         return new
-    else:    
-        return preds
+    else:
+        if "expectation" in args:
+            new = []
+            for pred in preds:
+                label = int( round(expectation(pred)) )
+                new.append( np.eye(args["num_classes"])[label].tolist() )
+            return new
+        else:    
+            return preds
 
 if __name__ == '__main__':
     x = ArffToArgs()
-    x.set_input("data/auto_price.arff")
+    #x.set_input("data/auto_price.arff")
+    if len(sys.argv) != 3:
+        sys.argv.append("data/2dplanes.arff")
+        sys.argv.append("kappa")
+    x.set_input( sys.argv[1] )
+    print "Training on: %s" % sys.argv[1]
     x.set_class_index("last")
     x.set_impute(True)
     x.set_binarize(True)
     x.set_standardize(True)
-    x.set_arguments("a=1;b=0;logistic=True;alpha=0.1;rmsprop=True;epochs=10000;batch_size=1000000")
-    #x.set_arguments("a=1;b=0;regression=True;alpha=0.1;rmsprop=True;epochs=10000;batch_size=1000000")
-
-    #x.set_arguments("a=1;b=0;logistic=True;alpha=0.1;adagrad=True;epochs=50000;batch_size=1000000")
+    if sys.argv[2] == "kappa":
+        #x.set_arguments("expectation=True;a=1;b=0;logistic=True;alpha=0.1;rmsprop=True;epochs=5000")
+        x.set_arguments("expectation=True;a=1;b=0;logistic=True;alpha=0.1;schedule=500;epochs=5000")
+    elif sys.argv[2] == "regression":
+        #x.set_arguments("regression=True;alpha=0.1;rmsprop=True;epochs=5000")
+        x.set_arguments("regression=True;alpha=0.1;schedule=500;epochs=5000")
+    else:
+        print "error!"
     args = x.get_args()
     args["debug"] = False
 

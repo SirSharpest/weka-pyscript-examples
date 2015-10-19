@@ -43,13 +43,13 @@ def squared_error_net():
     l_hidden = lasagne.layers.DenseLayer(
         l_in,
         num_units=args["num_classes"]-1,
-        nonlinearity=lasagne.nonlinearities.rectify,
+        nonlinearity=lasagne.nonlinearities.sigmoid,
         W=lasagne.init.GlorotUniform()
     )
     l_out = lasagne.layers.DenseLayer(
         l_hidden,
         num_units=1,
-        nonlinearity=lasagne.nonlinearities.rectify,
+        nonlinearity=lasagne.nonlinearities.linear,
         W=lasagne.init.GlorotUniform()
     )
     l_flatten = lasagne.layers.FlattenLayer(l_out, outdim=1)
@@ -69,13 +69,13 @@ def squared_error_net_adaptive():
     l_hidden = lasagne.layers.DenseLayer(
         l_in,
         num_units=get_num_hidden_units(num_attributes, args["num_classes"]),
-        nonlinearity=lasagne.nonlinearities.rectify,
+        nonlinearity=lasagne.nonlinearities.sigmoid,
         W=lasagne.init.GlorotUniform()
     )
     l_out = lasagne.layers.DenseLayer(
         l_hidden,
         num_units=1,
-        nonlinearity=lasagne.nonlinearities.rectify,
+        nonlinearity=lasagne.nonlinearities.linear,
         W=lasagne.init.GlorotUniform()
     )
     l_flatten = lasagne.layers.FlattenLayer(l_out, outdim=1)
