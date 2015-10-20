@@ -198,7 +198,7 @@ def test(arg, model):
         symbols.label_vector
     )
 
-    filenames = [ (args["dir"] + os.path.sep + args["filename"][int(x)]) \
+    filenames = [ (args["dir"] + os.path.sep + args["attr_values"]["filename"][int(x)]) \
         for x in args["X_test"].flatten().tolist() ]
 
     X_test = np.asarray( [load_image(x) for x in filenames], dtype="float32" )
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     f.close()
     args["lambda"] = 0
     args["alpha"] = 0.01
-    args["epochs"] = 1
+    args["epochs"] = 10
     args["dir"] = "data"
 
     weights = train(args)
@@ -229,7 +229,6 @@ if __name__ == '__main__':
 
     preds = test(args, weights)
 
-    for pred in preds:
-        print(pred)
+    print ("done!")
 
 
